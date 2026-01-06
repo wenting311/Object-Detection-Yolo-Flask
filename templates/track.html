@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即時人員追蹤</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .track-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding-top: 10px;
+        }
+        .controls {
+            display:flex;
+            gap:12px;
+            align-items:center;
+        }
+        .counter {
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .download-link {
+            display:inline-block;
+            background: #4A90E2;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-left: 8px;
+        }
+        .download-link:hover { background: #357ABD; }
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.18s ease-in-out;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a class="nav-brand" href="/">圖片辨識</a>
+            <ul class="nav-links">
+                <li><a href="/">圖片辨識</a></li>
+                <li><a href="/video">卯時辨識</a></li>
+                <li><a href="/track">即時人員追蹤</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="track-container">
+        <h1>即時人員追蹤</h1>
+
+        <div class="controls">
+            <label><input type="checkbox" id="toggle-ids" checked> 顯示 ID</label>
+            <label><input type="checkbox" id="toggle-logging"> 啟用日誌</label>
+            <button id="download-btn" class="download-link" style="display:none;">下載日誌</button>
+            <div class="counter">即時人數： <span id="count">0</span></div>
+        </div>
+
+        <img id="track-frame" src="/track_feed?draw_ids=1" alt="Track Feed">
+    </div>
+
+    <script>
+        const img = document.getElementById('track-frame');
+        const checkbox = document.getElementById('toggle-ids');
+        const logCheckbox = document.getElementById('toggle-logging');
+        const countSpan = document.getElementById('count');
+
+        function refreshFeed() {
+            const draw = checkbox.checked ? '1' : '0';
+            img.src = `/track_feed?draw_ids=${draw}&_=${Date.now()}`;
+        }
+
+        checkbox.addEventListener('change', refreshFeed);
+        const downloadBtn = document.getElementById('download-btn');
+
+        // keep existing HEAD check to toggle download availability
+        async function updateDownloadButton() {
+            try {
+                const r = await fetch('/download_track_log', { method: 'HEAD' });
+                downloadBtn.style.display = r.ok ? 'inline-block' : 'none';
+            } catch (e) {
+                downloadBtn.style.display = 'none';
+            }
+        }
+
+        logCheckbox.addEventListener('change', async () => {
+            const enable = logCheckbox.checked ? '1' : '0';
+            try {
+                await fetch(`/track_logging?enable=${enable}`);
+            } catch (e) {
+                console.error('Toggle logging error', e);
+            }
+            // refresh availability after toggling
+            setTimeout(updateDownloadButton, 500);
+        });
+
+        async function initLoggingStatus() {
+            try {
+                const r = await fetch('/track_logging_status');
+                const text = await r.text();
+                logCheckbox.checked = (text.trim() === '1');
+            } catch (e) {
+                console.error(e);
+            }
+            updateDownloadButton();
+        }
+
+        // Simple toast helper
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            // force reflow to enable transition
+            requestAnimationFrame(() => t.classList.add('show'));
+            setTimeout(() => {
+                t.classList.remove('show');
+                setTimeout(() => t.remove(), 200);
+            }, 2200);
+        }
+
+        // Download button: native confirm(), fetch blob, programmatic download, toast
+        downloadBtn.addEventListener('click', async () => {
+            if (!confirm('確定要下載目前的追蹤日誌嗎？')) return;
+            downloadBtn.disabled = true;
+            try {
+                const res = await fetch('/download_track_log');
+                if (!res.ok) {
+                    showToast('下載失敗');
+                    return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'track_log.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showToast('下載成功');
+            } catch (e) {
+                console.error('Download error', e);
+                showToast('下載失敗');
+            } finally {
+                downloadBtn.disabled = false;
+            }
+        });
+
+        async function updateCount() {
+            try {
+                const res = await fetch('/track_count');
+                const text = await res.text();
+                countSpan.textContent = text;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // poll count every 750ms
+        setInterval(updateCount, 750);
+        updateCount();
+        initLoggingStatus();
+    </script>
+</body>
+</html>

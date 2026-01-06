@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a class="nav-brand" href="/">圖片辨識</a>
+            <ul class="nav-links">
+                <li><a href="/">圖片辨識</a></li>
+                <li><a href="/video">卯時辨識</a></li>
+                <li><a href="/track">即時人員追蹤</a></li>
+            </ul>
+        </div>
+    </nav>
     <div class="container">
         <h1>Upload an Image to Apply Object Detection</h1>
         <form id="upload-form" action="/object-detection/" method="post" enctype="multipart/form-data">
