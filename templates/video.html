@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Webcam Object Detection</title>
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         body {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            height: calc(100vh - 70px);
             margin: 0;
+            padding-top: 70px;
             background: linear-gradient(135deg, #f06, #48f);
             font-family: Arial, sans-serif;
             color: #fff;
@@ -33,6 +35,16 @@
     </style>
 </head>
 <body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a class="nav-brand" href="/">圖片辨識</a>
+            <ul class="nav-links">
+                <li><a href="/">圖片辨識</a></li>
+                <li><a href="/video">即時辨識</a></li>
+                <li><a href="/track">即時人員追蹤</a></li>
+            </ul>
+        </div>
+    </nav>
     <h1>Face Detection Application</h1>
     <img id="video" src="/video_feed" alt="Video Feed">
 </body>
